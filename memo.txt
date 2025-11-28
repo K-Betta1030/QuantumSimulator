@@ -1,0 +1,4 @@
+backend側実行
+uvicorn main:app --reload
+frontend側実行
+npm start
