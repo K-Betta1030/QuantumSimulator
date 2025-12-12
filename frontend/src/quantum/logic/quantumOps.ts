@@ -1,4 +1,5 @@
 import { useQuantumStore } from "../store/quantumStore";
+import { Complex } from "../../types/quantum";
 
 /* =========================================================
    StepForward：1ゲート専用 WebSocket /ws/step を使用
@@ -12,7 +13,7 @@ export async function stepForward() {
     pushHistory,
     nextStep,
     pushLog,
-    setStateVector,
+    updateFromBackend
   } = useQuantumStore.getState();
 
   if (currentStep >= gates.length) {
@@ -44,17 +45,16 @@ export async function stepForward() {
         return resolve();
       }
 
-      const newVec: [number, number] = [
-        data.state_vector[0],
-        data.state_vector[1],
-      ];
+      const newVec = data.state_vector as [Complex, Complex];
+      const newProbs = data.probabilities as [number, number];
 
+      // Store更新
       pushHistory(newVec);
-      setStateVector(newVec);
+      updateFromBackend(newVec, newProbs); // ここでState更新
       nextStep();
 
-      const p0 = data.probabilities[0].toFixed(3);
-      const p1 = data.probabilities[1].toFixed(3);
+      const p0 = newProbs[0].toFixed(3);
+      const p1 = newProbs[1].toFixed(3);
       pushLog(`→ |0⟩=${p0}, |1⟩=${p1}`);
 
       ws.close();

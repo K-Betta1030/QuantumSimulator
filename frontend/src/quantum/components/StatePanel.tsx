@@ -1,23 +1,22 @@
 import React from "react";
+import { Complex } from "../../types/quantum";
 
 interface Props {
-  stateVector: [number, number];  // [a, b]
+  stateVector: [Complex, Complex];
 }
 
 export default function StatePanel({ stateVector }: Props) {
-  const [a, b] = stateVector;
+  const [alpha, beta] = stateVector;
 
   // 確率
-  const p0 = (a * a).toFixed(3);
-  const p1 = (b * b).toFixed(3);
+  const p0 = (alpha.re ** 2 + alpha.im ** 2).toFixed(3);
+  const p1 = (beta.re ** 2 + beta.im ** 2).toFixed(3);
 
-  // Bloch sphere angles（θ, φ）
-  // a = cos(θ/2)
-  // b = e^{iφ} sin(θ/2)
-  const theta = 2 * Math.acos(a);  // θ
-  const phi = 0; // 今は実数のため φ = 0
-
-  const deg = (rad: number) => (rad * 180 / Math.PI).toFixed(1);
+  const fmt = (c: Complex) => {
+    const re = c.re.toFixed(3);
+    const im = c.im >= 0 ? `+${c.im.toFixed(3)}` : c.im.toFixed(3)
+    return `${re}${im}i`
+  }
 
   return (
     <div
@@ -32,25 +31,20 @@ export default function StatePanel({ stateVector }: Props) {
       <h3>State</h3>
 
       <div style={{ marginBottom: "10px" }}>
-        |ψ⟩ = {a.toFixed(3)}|0⟩ + {b.toFixed(3)}|1⟩
+        |ψ⟩ = ({fmt(alpha)})|0⟩ + <br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;({fmt(beta)})|1⟩
       </div>
 
       <div>
         <b>Amplitude</b><br />
-        a = {a.toFixed(3)}<br />
-        b = {b.toFixed(3)}
+        α = {fmt(alpha)}<br />
+        β = {fmt(beta)}
       </div>
 
       <div style={{ marginTop: "10px" }}>
         <b>Probability</b><br />
         P(0) = {p0}<br />
         P(1) = {p1}
-      </div>
-
-      <div style={{ marginTop: "10px" }}>
-        <b>Bloch Sphere</b><br />
-        θ = {deg(theta)}°<br />
-        φ = {deg(phi)}°
       </div>
     </div>
   );

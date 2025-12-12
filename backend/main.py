@@ -18,18 +18,34 @@ app.add_middleware(
 
 # ゲート定義
 GATES = {
-    "X": np.array([[0, 1], [1, 0]]),
-    "Z": np.array([[1, 0], [0, -1]]),
-    "H": (1 / np.sqrt(2)) * np.array([[1, 1], [1, -1]]),
+    "X": np.array([[0, 1], [1, 0]], dtype=complex),
+    "Z": np.array([[1, 0], [0, -1]], dtype=complex),
+    "H": (1 / np.sqrt(2)) * np.array([[1, 1], [1, -1]], dtype=complex),
+    "Y": np.array([[0, -1j],[1j, 0]], dtype=complex),
 }
 
-#リクエストモデル
+# 複素数を辞書型に変換するヘルパー
+def to_c_dict(c: complex):
+    return {"re": float(c.real), "im": float(c.imag)}
+
+# --- Pydantic モデル ---
+
+class ComplexNum(BaseModel):
+    re: float
+    im: float
+
 class CircuitRequest(BaseModel):
-    gates: list[str]    #例: ["H", "Z"]
+    gates: list[str]
+
+class SingleGateRequest(BaseModel):
+    gate: str
+    state: List[ComplexNum]  # [ {re, im}, {re, im} ]
 
 @app.post("/api/execute")
 def execute_circuit(req: CircuitRequest):
-    state = np.array([[1], [0]], dtype=complex) # |0> 初期状態
+    # 初期状態 |0> = [1+0j, 0+0j]
+    state = np.array([[1+0j], [0+0j]], dtype=complex)
+
     for gate_name in req.gates:
         if gate_name not in GATES:
             return {"error": f"Unknown gate: {gate_name}"}
@@ -37,7 +53,7 @@ def execute_circuit(req: CircuitRequest):
 
     probs = np.abs(state.flatten()) ** 2    #各状態の確立
     return {
-        "state_vector": [complex(x).real for x in state.flatten()],
+        "state_vector": [to_c_dict(x) for x in state.flatten()],
         "probabilities": probs.tolist(),
     }
 
@@ -48,18 +64,20 @@ async def websocket_execute(websocket: WebSocket):
     try:
         data = await websocket.receive_json()
         gates = data.get("gates", [])
-        state = np.array([[1], [0]], dtype=complex)  # |0>
+        state = np.array([[1], [0]], dtype=complex)
 
         for gate_name in gates:
             if gate_name not in GATES:
                 await websocket.send_json({"error": f"Unknown gate: {gate_name}"})
                 return
+            
             state = np.dot(GATES[gate_name], state)
             probs = np.abs(state.flatten()) ** 2
+
             # 状態をフロントへ逐次送信
             await websocket.send_json({
                 "gate": gate_name,
-                "state_vector": [float(x.real) for x in state.flatten()],
+                "state_vector": [to_c_dict(x) for x in state.flatten()],
                 "probabilities": probs.tolist(),
             })
             await asyncio.sleep(0.6)  # ステップごとに0.6秒待つ
@@ -76,7 +94,12 @@ class SingleGateRequest(BaseModel):
 @app.post("/api/apply_gate")
 def apply_gate(req: SingleGateRequest):
     # 現在の状態ベクトル
-    alpha, beta = req.state
+    try:
+        alpha = complex(req.state[0].re, req.state[0].im)
+        beta = complex(req.state[1].re, req.state[1].im)
+    except IndexError:
+        return {"error": "Invalid state vector format"}
+    
     state = np.array([[alpha], [beta]], dtype=complex)
 
     # ゲート名のチェック
@@ -87,15 +110,11 @@ def apply_gate(req: SingleGateRequest):
     gate_matrix = GATES[req.gate]
     new_state = np.dot(gate_matrix, state)
 
-    # 新しい状態の取得
-    alpha2 = float(new_state[0][0].real)
-    beta2 = float(new_state[1][0].real)
-
     # 確率
     probs = np.abs(new_state.flatten()) ** 2
 
     return {
-        "state_vector": [alpha2, beta2],
+        "state_vector": [to_c_dict(x) for x in new_state.flatten()],
         "probabilities": probs.tolist(),
     }
 
@@ -106,7 +125,10 @@ async def websocket_step(websocket: WebSocket):
     try:
         data = await websocket.receive_json()
         gate = data.get("gate")
-        state = np.array(data.get("state"), dtype=complex).reshape((2, 1))
+        raw_state = data.get("state", [])
+        alpha = complex(raw_state[0]["re"], raw_state[0]["im"])
+        beta = complex(raw_state[1]["re"], raw_state[1]["im"])
+        state = np.array([[alpha], [beta]], dtype=complex)
 
         if gate not in GATES:
             await websocket.send_json({"error": f"Unknown gate: {gate}"})
@@ -118,9 +140,10 @@ async def websocket_step(websocket: WebSocket):
 
         await websocket.send_json({
             "gate": gate,
-            "state_vector": [float(x.real) for x in state.flatten()],
+            "state_vector": [to_c_dict(x) for x in state.flatten()],
             "probabilities": probs.tolist(),
         })
 
     except Exception as e:
+        print(f"Error: {e}") # デバッグ用ログ
         await websocket.send_json({"error": str(e)})

@@ -1,36 +1,47 @@
 import { create } from "zustand";
+import { Complex } from "../../types/quantum";
 
 export interface QuantumState {
+  stateVector: [Complex, Complex];
+  probabilities: [number, number];
+  history: [Complex, Complex][];
+
   gates: string[];
   currentStep: number;
-  stateVector: [number, number];
-  history: [number, number][];
   isRunning: boolean;
-
   log: string[];
+
   pushLog: (msg: string) => void;
   clearLog: () => void;
 
   setGates: (g: string[]) => void;
   addGate: (g: string) => void;
   removeGate: (idx: number) => void;
-  setStateVector: (v: [number, number]) => void;
 
-  pushHistory: (v: [number, number]) => void;
-  popHistory: () => [number, number] | null;
+  updateFromBackend: (newState: [Complex, Complex], newProbs: [number, number]) => void;
+
+  pushHistory: (v: [Complex, Complex]) => void;
+  popHistory: () => [Complex, Complex] | null;
 
   nextStep: () => void;
   prevStep: () => void;
-  reset: () => void;
 
+  reset: () => void;
   setIsRunning: (v: boolean) => void;
 }
+
+const initialComplexState: [Complex, Complex] = [
+  {re: 1, im: 0},
+  {re: 0, im: 0}
+]
 
 export const useQuantumStore = create<QuantumState>((set, get) => ({
   gates: ["H", "Z", "X"],
   currentStep: 0,
-  stateVector: [1, 0],
-  history: [[1, 0]],
+
+  stateVector: initialComplexState,
+  probabilities: [1, 0],
+  history: [initialComplexState],
   isRunning: false,
 
   log: ["Simulator Ready"],
@@ -41,7 +52,10 @@ export const useQuantumStore = create<QuantumState>((set, get) => ({
   clearLog: () => set({ log: [] }),
 
   setGates: (g) => set({ gates: g }),
-  setStateVector: (v) => set({ stateVector: v }),
+  updateFromBackend: (newState, newProbs) => set((s) => ({
+    stateVector: newState,
+    probabilities: newProbs,
+  })),
 
   pushHistory: (v) =>
     set((s) => ({
@@ -72,8 +86,9 @@ export const useQuantumStore = create<QuantumState>((set, get) => ({
   reset: () =>
     set({
       currentStep: 0,
-      stateVector: [1, 0],
-      history: [[1, 0]],
+      stateVector: initialComplexState,
+      probabilities: [1, 0],
+      history: [initialComplexState],
       log: ["Reset to |0⟩"],
       isRunning: false,
     }),
