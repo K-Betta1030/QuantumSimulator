@@ -5,7 +5,7 @@ export default function GatePalette() {
 
   return (
     <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
-      {["H", "X", "Y", "Z"].map((g) => (
+      {["H", "X", "Y", "Z", "S", "T"].map((g) => (
         <button
           key={g}
           onClick={() => addGate(g)}
