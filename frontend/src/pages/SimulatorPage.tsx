@@ -1,4 +1,5 @@
-import { runAll, stepForward, resetCircuit, undoStep } from "../quantum/logic/quantumOps";
+import { useEffect } from "react";
+import { runAll, stepForward, resetCircuit, undoStep, initConnection } from "../quantum/logic/quantumOps";
 import { useQuantumStore } from "../quantum/store/quantumStore";
 import BlochSphere from "../quantum/components/BlochSphere";
 import GateControls from "../quantum/components/GateControls";
@@ -11,6 +12,10 @@ export default function SimulatorPage() {
   const stateVector = useQuantumStore((s) => s.stateVector);
   const isRunning = useQuantumStore((s) => s.isRunning);
   const gates = useQuantumStore((s) => s.gates);
+
+  useEffect(() => {
+    initConnection();
+  }, []);
 
   return (
     <div style={{ padding: "20px", maxWidth: "1200px", margin: "auto" }}>

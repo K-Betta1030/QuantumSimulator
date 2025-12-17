@@ -125,31 +125,37 @@ def apply_gate(req: SingleGateRequest):
         "probabilities": probs.tolist(),
     }
 
-@app.websocket("/ws/step")
-async def websocket_step(websocket: WebSocket):
+@app.websocket("/ws/session")
+async def websocket_session(websocket: WebSocket):
     await websocket.accept()
 
     try:
-        data = await websocket.receive_json()
-        gate = data.get("gate")
-        raw_state = data.get("state", [])
-        alpha = complex(raw_state[0]["re"], raw_state[0]["im"])
-        beta = complex(raw_state[1]["re"], raw_state[1]["im"])
-        state = np.array([[alpha], [beta]], dtype=complex)
+        while True:
+            # メッセージを待機
+            data = await websocket.receive_json()
 
-        if gate not in GATES:
-            await websocket.send_json({"error": f"Unknown gate: {gate}"})
-            return
+            # --- 処理ロジック (apply_gateと同様) ---
+            gate = data.get("gate")
 
-        # 1ゲートだけ適用
-        state = np.dot(GATES[gate], state)
-        probs = np.abs(state.flatten()) ** 2
+            # 辞書型 {re, im} から Python複素数へ復元
+            raw_state = data.get("state", [])
+            alpha = complex(raw_state[0]["re"], raw_state[0]["im"])
+            beta = complex(raw_state[1]["re"], raw_state[1]["im"])
+            state = np.array([[alpha], [beta]], dtype=complex)
 
-        await websocket.send_json({
-            "gate": gate,
-            "state_vector": [to_c_dict(x) for x in state.flatten()],
-            "probabilities": probs.tolist(),
-        })
+            if gate not in GATES:
+                await websocket.send_json({"error": f"Unknown gate: {gate}"})
+                continue
+
+            # 1ゲートだけ適用
+            state = np.dot(GATES[gate], state)
+            probs = np.abs(state.flatten()) ** 2
+
+            await websocket.send_json({
+                "gate": gate,
+                "state_vector": [to_c_dict(x) for x in state.flatten()],
+                "probabilities": probs.tolist(),
+            })
 
     except Exception as e:
         print(f"Error: {e}") # デバッグ用ログ
