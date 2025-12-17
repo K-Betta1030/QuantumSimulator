@@ -24,6 +24,11 @@ GATES = {
     "Y": np.array([[0, -1j],[1j, 0]], dtype=complex),
     "S": np.array([[1, 0], [0, 1j]], dtype=complex),
     "T": np.array([[1, 0], [0, np.exp(1j * np.pi / 4)]], dtype=complex),
+    # -1j は -i を意味する
+    "Sdg": np.array([[1, 0], [0, -1j]], dtype=complex),
+    
+    # exp(-i * pi/4)
+    "Tdg": np.array([[1, 0], [0, np.exp(-1j * np.pi / 4)]], dtype=complex),
 }
 
 # 複素数を辞書型に変換するヘルパー
