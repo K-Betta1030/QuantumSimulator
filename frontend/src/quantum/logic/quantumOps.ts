@@ -1,20 +1,19 @@
 import { useQuantumStore } from "../store/quantumStore";
 import { Complex } from "../../types/quantum";
 
-// --- モジュールレベル変数 (シングルトン) ---
+// --- モジュールレベル変数 ---
 let socket: WebSocket | null = null;
-let pendingResolve: (() => void) | null = null; // 返信待ちのPromiseを解決する関数
+let pendingResolve: (() => void) | null = null;
 
 // --- 接続管理 ---
 
 export function initConnection() {
   if (socket && socket.readyState === WebSocket.OPEN) return;
 
-  // 新しいエンドポイント /ws/session に接続
   socket = new WebSocket("ws://127.0.0.1:8000/ws/session");
 
   socket.onopen = () => {
-    console.log("✅ WS Connected");
+    console.log("✅ WS Connected (2-Qubit Mode)");
   };
 
   socket.onmessage = (evt) => {
@@ -27,19 +26,20 @@ export function initConnection() {
       return;
     }
 
-    // データの更新
-    const newVec = data.state_vector as [Complex, Complex];
-    const newProbs = data.probabilities as [number, number];
+    // Backendからは長さ4の配列が返ってくる
+    const newVec = data.state_vector as Complex[];
+    const newProbs = data.probabilities as number[];
 
     pushHistory(newVec);
     updateFromBackend(newVec, newProbs);
     nextStep();
 
-    const p0 = newProbs[0].toFixed(3);
-    const p1 = newProbs[1].toFixed(3);
-    pushLog(`→ |0⟩=${p0}, |1⟩=${p1}`);
+    // ログには簡易的に確率を表示 (4状態分)
+    // P00, P01, P10, P11
+    const pStr = newProbs.map(p => p.toFixed(2)).join(", ");
+    pushLog(`→ Probs: [${pStr}]`);
 
-    // 待機していた stepForward の Promise を解決して、次の処理へ進ませる
+    // 待機解除
     if (pendingResolve) {
       pendingResolve();
       pendingResolve = null;
@@ -53,8 +53,11 @@ export function initConnection() {
 }
 
 /* =========================================================
-   StepForward：常時接続ソケットを使用
+   StepForward
    ========================================================= */
+
+// ... import等はそのまま ...
+// stepForward 関数のみ修正します
 
 export async function stepForward() {
   const { gates, currentStep, stateVector, pushLog } = useQuantumStore.getState();
@@ -64,34 +67,44 @@ export async function stepForward() {
     return;
   }
 
-  // ソケットが準備できていなければ再接続
   if (!socket || socket.readyState !== WebSocket.OPEN) {
     pushLog("⚠️ Reconnecting...");
     initConnection();
-    // 接続待ちの簡易ウェイト
     await new Promise(r => setTimeout(r, 500)); 
   }
 
-  const gate = gates[currentStep];
-  pushLog(`🧩 Step: Applying gate ${gate}`);
+  // ★変更: gates[currentStep] はオブジェクトになりました
+  const gateObj = gates[currentStep];
+  const gateName = gateObj.name;
+  const targetIndex = gateObj.target;
 
-  // Promiseを生成し、resolve関数を外(pendingResolve)に出す
-  // これにより、onmessage が来るまでこの関数は await で止まる
+  // CNOTの場合は特例処理（今は0->1固定なのでtarget=0として送るか、バックエンドの仕様に合わせる）
+  // バックエンドの仕様では CNOT(CX) は target指定に関わらず 0->1 で実装されているので
+  // ここではそのまま送りますが、ログは見やすくします。
+  
+  if (gateName === "CNOT") {
+      pushLog(`🧩 Step: CNOT (Control:0 -> Target:1)`);
+  } else {
+      pushLog(`🧩 Step: ${gateName} on Qubit ${targetIndex}`);
+  }
+
   return new Promise<void>((resolve) => {
     pendingResolve = resolve;
 
-    // 送信
     socket!.send(
       JSON.stringify({
-        gate,
+        gate: gateName,
+        target: targetIndex, // ★動的な値を送信！
         state: stateVector,
       })
     );
   });
 }
 
+// runAll などは変更不要（stepForwardを呼んでいるだけなので）
+
 /* =========================================================
-   RunAll：変更なし (stepForwardがPromiseを返すのでそのまま動く)
+   RunAll
    ========================================================= */
 
 export async function runAll() {
@@ -106,11 +119,9 @@ export async function runAll() {
   setIsRunning(true);
 
   for (let i = currentStep; i < gates.length; i++) {
-    // 実行中フラグが折られたら中断 (Resetボタンなどが押された場合)
     if (!useQuantumStore.getState().isRunning) break;
 
     await stepForward();
-    // アニメーション用ウェイト (通信が速くなったので、これがないと一瞬で終わる！)
     await new Promise((r) => setTimeout(r, 300));
   }
 
@@ -118,7 +129,7 @@ export async function runAll() {
   setIsRunning(false);
 }
 
-// Undo / Reset は変更なし
+// Undo / Reset
 export function undoStep() {
   const { popHistory, prevStep, pushLog } = useQuantumStore.getState();
   const result = popHistory();
@@ -133,5 +144,5 @@ export function undoStep() {
 export function resetCircuit() {
   const { reset, pushLog } = useQuantumStore.getState();
   reset();
-  pushLog("Reset simulator to |0⟩");
+  pushLog("Reset simulator to |00⟩");
 }

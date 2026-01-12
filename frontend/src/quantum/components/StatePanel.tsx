@@ -2,21 +2,19 @@ import React from "react";
 import { Complex } from "../../types/quantum";
 
 interface Props {
-  stateVector: [Complex, Complex];
+  stateVector: Complex[]; // 配列に変更
 }
 
 export default function StatePanel({ stateVector }: Props) {
-  const [alpha, beta] = stateVector;
-
-  // 確率
-  const p0 = (alpha.re ** 2 + alpha.im ** 2).toFixed(3);
-  const p1 = (beta.re ** 2 + beta.im ** 2).toFixed(3);
-
+  // 表示用フォーマッタ
   const fmt = (c: Complex) => {
     const re = c.re.toFixed(3);
-    const im = c.im >= 0 ? `+${c.im.toFixed(3)}` : c.im.toFixed(3)
-    return `${re}${im}i`
-  }
+    const im = c.im >= 0 ? `+${c.im.toFixed(3)}` : c.im.toFixed(3);
+    return `${re}${im}i`;
+  };
+
+  // ラベル定義 (2量子ビット用)
+  const labels = ["|00⟩", "|01⟩", "|10⟩", "|11⟩"];
 
   return (
     <div
@@ -26,26 +24,25 @@ export default function StatePanel({ stateVector }: Props) {
         borderRadius: "10px",
         fontFamily: "monospace",
         textAlign: "left",
+        minWidth: "250px"
       }}
     >
-      <h3>State</h3>
-
-      <div style={{ marginBottom: "10px" }}>
-        |ψ⟩ = ({fmt(alpha)})|0⟩ + <br/>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;({fmt(beta)})|1⟩
-      </div>
-
-      <div>
-        <b>Amplitude</b><br />
-        α = {fmt(alpha)}<br />
-        β = {fmt(beta)}
-      </div>
-
-      <div style={{ marginTop: "10px" }}>
-        <b>Probability</b><br />
-        P(0) = {p0}<br />
-        P(1) = {p1}
-      </div>
+      <h3>State Vector (Amplitude)</h3>
+      
+      {stateVector.map((amp, i) => {
+        // 確率 |c|^2
+        const prob = (amp.re ** 2 + amp.im ** 2).toFixed(3);
+        
+        return (
+          <div key={i} style={{ marginBottom: "8px", borderBottom: "1px solid #ddd", paddingBottom: "4px" }}>
+            <span style={{ fontWeight: "bold", color: "#333" }}>{labels[i] || `|${i}⟩`}</span>
+            <div style={{ marginLeft: "10px", fontSize: "0.9em" }}>
+              Val: {fmt(amp)} <br/>
+              Prob: {prob}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
