@@ -1,4 +1,6 @@
 backend側実行
+cd C:\work\QuantumSimulator\backend
 uvicorn main:app --reload
 frontend側実行
+cd C:\work\QuantumSimulator\frontend
 npm start
