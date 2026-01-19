@@ -37,7 +37,8 @@ export interface QuantumState {
 
   nextStep: () => void;
   prevStep: () => void;
-  reset: () => void;
+  clearCircuit: () => void;
+  resetState: () => void;
   setIsRunning: (v: boolean) => void;
 }
 
@@ -80,15 +81,25 @@ export const useQuantumStore = create<QuantumState>()(
     
     prevStep: () => set((s) => ({ currentStep: Math.max(0, s.currentStep - 1) })),
 
-    reset: () => set({
+    resetState: () => set({
         currentStep: 0,
         stateVector: initialVector,
         probabilities: [1, 0, 0, 0],
         history: [initialVector],
-        log: ["Reset to |00⟩"],
+        log: ["Rewind: Back to start"],
         isRunning: false,
-        gates: [] // ゲートもクリア
     }),
+
+    clearCircuit: () =>
+      set({
+        gates: [], // ここでゲートを消す
+        currentStep: 0,
+        stateVector: initialVector,
+        probabilities: [1, 0, 0, 0],
+        history: [initialVector],
+        log: ["Circuit cleared"],
+        isRunning: false,
+      }),
 
     setIsRunning: (v) => set({ isRunning: v }),
 

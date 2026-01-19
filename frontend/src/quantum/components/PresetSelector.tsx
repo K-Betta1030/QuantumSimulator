@@ -8,7 +8,7 @@ const generateId = () => Math.random().toString(36).substr(2, 9);
 
 export default function PresetSelector() {
   const setGates = useQuantumStore((s) => s.setGates);
-  const reset = useQuantumStore((s) => s.reset);
+  const resetState = useQuantumStore((s) => s.resetState);
   const pushLog = useQuantumStore((s) => s.pushLog);
 
   // --- プリセット定義 ---
@@ -73,7 +73,7 @@ export default function PresetSelector() {
 
   // --- 共通処理 ---
   const applyPreset = (name: string, gates: CircuitGate[]) => {
-    reset(); // まずリセット
+    resetState(); // まずリセット
     // 少し待ってからゲートセット (Reactの状態更新タイミング調整)
     setTimeout(() => {
         setGates(gates);

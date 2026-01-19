@@ -141,8 +141,14 @@ export function undoStep() {
   pushLog("Undo: Returned to previous state");
 }
 
-export function resetCircuit() {
-  const { reset, pushLog } = useQuantumStore.getState();
-  reset();
-  pushLog("Reset simulator to |00⟩");
+export function resetState() { // 名前はわかりやすく resetState として export
+  const { resetState, pushLog } = useQuantumStore.getState();
+  resetState();
+  pushLog("Rewind: Back to start");
+}
+
+export function clearAll() {
+  const { clearCircuit, pushLog } = useQuantumStore.getState();
+  clearCircuit();
+  pushLog("🗑️ Circuit Cleared");
 }

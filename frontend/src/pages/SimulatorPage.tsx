@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 // ★ DndKit のインポートを追加
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from "@dnd-kit/core";
 
-import { runAll, stepForward, resetCircuit, undoStep, initConnection } from "../quantum/logic/quantumOps";
+import { runAll, stepForward, resetState, undoStep, initConnection, clearAll } from "../quantum/logic/quantumOps";
 import { useQuantumStore } from "../quantum/store/quantumStore";
 import BlochSphere from "../quantum/components/BlochSphere";
 import GateControls from "../quantum/components/GateControls";
@@ -73,7 +73,8 @@ export default function SimulatorPage() {
             onRun={runAll}
             onStep={stepForward}
             onUndo={undoStep}
-            onReset={resetCircuit}
+            onReset={resetState}
+            onClear={clearAll}
             isRunning={isRunning}
           />
         </div>
