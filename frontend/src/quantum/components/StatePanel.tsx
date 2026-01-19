@@ -8,63 +8,109 @@ interface Props {
 export default function StatePanel({ stateVector }: Props) {
   const labels = ["|00⟩", "|01⟩", "|10⟩", "|11⟩"];
 
-  // 複素数表示フォーマッタ
-  const fmt = (c: Complex) => {
-    const re = c.re.toFixed(2);
-    const im = c.im >= 0 ? `+${c.im.toFixed(2)}` : c.im.toFixed(2);
-    return `${re}${im}i`;
-  };
-
   return (
-    <div style={{ background: "#f3f3f3", padding: "20px", borderRadius: "10px", fontFamily: "monospace", minWidth: "250px" }}>
-      <h3>State Vector</h3>
+    <div style={{ 
+      background: "white", 
+      padding: "20px", 
+      borderRadius: "12px", 
+      boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+      fontFamily: "sans-serif",
+      minWidth: "300px",
+      height: "100%",
+      display: "flex",
+      flexDirection: "column"
+    }}>
+      <h3 style={{ marginTop: 0, borderBottom: "1px solid #eee", paddingBottom: "10px", color: "#444" }}>
+        Probability & Phase
+      </h3>
       
-      {stateVector.map((amp, i) => {
-        // 確率 |c|^2
-        const prob = amp.re ** 2 + amp.im ** 2;
-        // 位相角 (ラジアン) -> 度数
-        const phase = Math.atan2(amp.im, amp.re);
-        const degrees = (phase * 180) / Math.PI;
+      <div style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: "15px" }}>
+        {stateVector.map((amp, i) => {
+          // 確率計算
+          const prob = amp.re ** 2 + amp.im ** 2;
+          const probPercent = Math.round(prob * 100);
+          
+          // 位相計算 (-180度 〜 180度)
+          const phase = Math.atan2(amp.im, amp.re);
+          const degrees = (phase * 180) / Math.PI;
+          
+          // 位相を色相(0-360)に変換して色を決める
+          // 0度=赤, 120度=緑, 240度=青... のようなカラーホイール
+          const hue = degrees < 0 ? degrees + 360 : degrees;
+          const color = prob > 0.01 ? `hsl(${hue}, 80%, 45%)` : "#e0e0e0";
 
-        return (
-          <div key={i} style={{ marginBottom: "12px", borderBottom: "1px solid #ddd", paddingBottom: "8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            
-            {/* 左側: ラベルと数値 */}
-            <div>
-              <span style={{ fontWeight: "bold", fontSize: "1.1em", color: "#333" }}>{labels[i]}</span>
-              <div style={{ fontSize: "0.85em", color: "#555", marginTop: "4px" }}>
-                {fmt(amp)} <br/>
-                Prob: {(prob * 100).toFixed(1)}%
+          return (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+              
+              {/* 1. ラベル */}
+              <div style={{ 
+                width: "40px", 
+                fontWeight: "bold", 
+                fontSize: "1.1em", 
+                color: "#333",
+                fontFamily: "monospace"
+              }}>
+                {labels[i]}
               </div>
+
+              {/* 2. 確率バー */}
+              <div style={{ flex: 1, background: "#f5f5f5", height: "28px", borderRadius: "6px", position: "relative", overflow: "hidden" }}>
+                <div style={{ 
+                  width: `${probPercent}%`, 
+                  height: "100%", 
+                  background: color, // ★ここがポイント：位相色
+                  transition: "width 0.3s ease, background 0.3s ease",
+                  borderRadius: "6px 0 0 6px",
+                  // グラデーションや光沢を入れるとさらに綺麗に見えます
+                  backgroundImage: "linear-gradient(rgba(255,255,255,0.2), rgba(0,0,0,0.1))"
+                }} />
+                
+                {/* 確率の数値 */}
+                <span style={{ 
+                  position: "absolute", 
+                  right: "8px", 
+                  top: "50%", 
+                  transform: "translateY(-50%)", 
+                  fontSize: "0.85em", 
+                  color: probPercent > 50 ? "white" : "#888",
+                  fontWeight: "bold",
+                  textShadow: probPercent > 50 ? "0 1px 2px rgba(0,0,0,0.3)" : "none"
+                }}>
+                  {probPercent}%
+                </span>
+              </div>
+
+              {/* 3. 位相メーター (色付き) */}
+              <div style={{ width: "32px", height: "32px", flexShrink: 0 }}>
+                 <svg width="32" height="32" viewBox="0 0 32 32">
+                   {/* 外枠 */}
+                   <circle cx="16" cy="16" r="14" fill="white" stroke="#eee" strokeWidth="2" />
+                   
+                   {prob > 0.01 && (
+                     <>
+                       {/* 扇形で位相の範囲を示す等の演出も可能ですが、シンプルに針と色で */}
+                       <circle cx="16" cy="16" r="10" fill={color} opacity={0.2} />
+                       <line 
+                         x1="16" y1="16" 
+                         x2="16" y2="4" 
+                         stroke={color} 
+                         strokeWidth="2.5" 
+                         strokeLinecap="round"
+                         transform={`rotate(${degrees}, 16, 16)`} 
+                       />
+                       <circle cx="16" cy="16" r="2.5" fill={color} />
+                     </>
+                   )}
+                 </svg>
+                 <div style={{ fontSize: "0.6em", textAlign: "center", color: "#999", marginTop: "-2px" }}>
+                    {prob > 0.01 ? `${Math.round(degrees)}°` : ""}
+                 </div>
+              </div>
+
             </div>
-
-            {/* 右側: 位相メーター (SVG) */}
-            <div style={{ textAlign: "center" }}>
-               {/* 確率バー */}
-               <div style={{ width: "40px", height: "4px", background: "#ddd", marginBottom: "5px" }}>
-                 <div style={{ width: `${prob * 100}%`, height: "100%", background: "#4caf50" }} />
-               </div>
-
-               {/* 位相時計: 円と針 */}
-               <svg width="30" height="30" viewBox="0 0 32 32">
-                 <circle cx="16" cy="16" r="14" fill="#fff" stroke="#999" strokeWidth="2" />
-                 {/* 針: 位相に合わせて回転 (-90度して12時を開始位置にする) */}
-                 <line 
-                   x1="16" y1="16" 
-                   x2="16" y2="2" 
-                   stroke="#f44336" 
-                   strokeWidth="2" 
-                   transform={`rotate(${degrees}, 16, 16)`} 
-                 />
-                 {/* 中心点 */}
-                 <circle cx="16" cy="16" r="2" fill="#f44336" />
-               </svg>
-               <div style={{ fontSize: "0.7em", color: "#999" }}>{Math.round(degrees)}°</div>
-            </div>
-
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
