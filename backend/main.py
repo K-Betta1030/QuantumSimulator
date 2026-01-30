@@ -125,6 +125,3 @@ async def websocket_session(websocket: WebSocket):
 
     except Exception as e:
         print(f"WS Error: {e}")
-
-# (オプション) Run All用の一括実行APIも必要なら同様に更新が必要ですが、
-# 今回はWebSocketベースのステップ実行を主力にしているため割愛します。
