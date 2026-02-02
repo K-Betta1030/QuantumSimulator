@@ -1,41 +1,109 @@
 # 量子計算体験シミュレーター 開発仕様書 (Ver 1.0)
 
-## 1. プロジェクト概要
-量子計算の基礎概念（量子ビット、量子ゲート、重ね合わせ、干渉、もつれ）を、ブラウザ上で直感的に体験できるインタラクティブな学習ツール。
-特に「数式だけでは理解しづらい振幅や位相の干渉」を視覚的に理解させることを主眼とし、**2量子ビット回路（4状態）** までのシミュレーションを完全サポートする。
+## 1. エグゼクティブサマリー
 
-* **ターゲット:** 量子コンピュータ初学者、学生、エンジニア
-* **コンセプト:** アクセスして即座に実験開始
+本プロジェクトは、量子計算の基礎概念（量子ビット、量子ゲート、重ね合わせ、干渉、もつれ）を、ブラウザ上で直感的に体験できるインタラクティブな学習ツールです。
+特に「数式だけでは理解しづらい位相（Phase）の干渉」を視覚的に理解させることを主眼とし、**2量子ビット（4状態）** に特化した高速かつ軽量なシミュレーション環境を提供します。
 
-## 2. 実装ステータス概要 (Current Status)
+* **目的:** "No Login, No Setup"（アクセスして即座に実験開始）を掲げ、学習の敷居を極限まで下げる。
+* **成果物:** Webアプリケーション（React/Vite + Python/FastAPI）
+* **デプロイ:** Vercel (Frontend) + Render (Backend)
 
-* [x] **アーキテクチャ:** React (Frontend) + Python (Backend)
-* [x] **通信:** WebSocketによるリアルタイム双方向通信
-* [x] **操作:** Drag & Drop による直感的なゲート配置 (`@dnd-kit`)
-* [x] **計算エンジン:** NumPyによる2量子ビット（4x4行列）シミュレーション
-* [x] **可視化:**
-    * 部分トレースを用いたブロッホ球（混合状態の可視化）
-    * 位相（Phase）を色相と時計アイコンで表現した確率分布グラフ
-* [x] **プリセット:** Bell状態, スーパーデンス・コーディング, Groverのアルゴリズム
-* [ ] **課題モード:** 自動採点機能付きの学習コース（Next Step）
+## 2. 実装済み機能 (Current Status: Ver 1.0)
+
+### フロントエンド (React + TypeScript)
+
+* **量子回路エディタ:**
+* `@dnd-kit` を採用したモダンなドラッグ&ドロップ操作。
+* SVGによる動的描画（Canvas不使用による軽量化）。
+* ドロップ領域のプレビュー表示と、ドラッグ中のゴースト表示。
+
+
+* **シミュレーション制御:**
+* `Run All` (一括実行)、`Step` (1ステップ実行)。
+* `Rewind` (回路維持リセット)、`Clear` (全消去)。
+
+
+* **可視化 (Visualization):**
+* **StatePanel:** 確率（バーの長さ）に加え、**位相（Phase）を色相（HSLカラー）**で表現。干渉による打ち消し合いを直感的に判別可能。
+* **Bloch Sphere:** 部分トレース（Partial Trace）を用いて、量子もつれ状態でもQubit 0の状態を近似表示。
+
+
+* **教育支援機能:**
+* **Rich Tooltips:** ゲートにマウスオーバー時、その名称・解説・**行列表現（数式）**を表示。
+* **Presets:** Bell状態、Superdense Coding、Groverのアルゴリズム等をワンクリックで展開。
+
+
+
+### バックエンド (Python)
+
+* **計算エンジン:** NumPyによる2量子ビット（ 行列）ユニタリ演算。
+* **通信:** WebSocketによるリアルタイム双方向通信（操作ごとのレイテンシ < 50ms）。
+
+### 管理機能
+
+* **認証廃止:** ユーザー登録不要。ブラウザ完結型。
 
 ## 3. システムアーキテクチャ
+### 技術スタック (Final)
 
-### 構成図
-```mermaid
-graph TD
-    User[ユーザー (Browser)] -->|Drag & Drop操作| FE[Frontend (React/Vite)]
-    FE -->|WebSocket (JSON)| BE[Backend (Python/FastAPI)]
-    
-    subgraph Frontend
-        Store[Zustand (State Management)]
-        DnD[dnd-kit (Circuit Editor)]
-        Vis[SVG Visualization (Bloch/Probs)]
-    end
-    
-    subgraph Backend
-        Sim[Quantum Simulator (NumPy)]
-        Logic[Unitary Matrix Calculation]
-    end
-    
-    BE -->|状態ベクトル・確率| FE
+* **Frontend:** React, TypeScript, Vite, Zustand (状態管理), @dnd-kit, Emotion/CSS-in-JS
+* **Backend:** Python 3.10+, FastAPI, NumPy, Uvicorn
+* **Infra:** Vercel (Frontend), Render.com (Backend)
+
+## 4. UI/UX設計の変更点（当初案からのピボット）
+
+| 項目 | 当初案 | **実装結果 (Ver 1.0)** | 理由 |
+| --- | --- | --- | --- |
+| **描画技術** | Canvas / Three.js | **SVG** | 軽量かつReactコンポーネントとの親和性が高いため。 |
+| **Qubit数** | 最大6 | **固定2** | UIの複雑化を防ぎ、教育的本質（もつれ・干渉）に集中するため。 |
+| **データ保存** | DB (Postgres) | **なし / プリセット** | ログインの敷居を排除。共有は将来的にURLパラメータで行う。 |
+| **課題モード** | 自動採点システム | **プリセット機能** | まずは「手本を見る」ことを優先。自動採点はPhase 2へ移行。 |
+
+## 5. ロードマップ (Phase 2以降)
+
+Ver 1.0 の完成を受け、次は「ツールの深み」と「外部連携」を強化します。
+
+### 短期目標 (v1.1 - v1.2)
+
+1. **OpenQASM エクスポート:**
+* 作成した回路を標準コード形式で出力し、IBM Quantum等での実機実行を可能にする。
+
+
+2. **URLによる回路共有:**
+* 回路データを圧縮してURLパラメータに埋め込み、SNS等でシェア可能にする（Serverless）。
+
+
+
+### 中期目標 (v2.0)
+
+1. **3量子ビットへの拡張:**
+* トフォリゲート (CCNOT) の導入による論理演算の実現。
+* GHZ状態、量子テレポーテーションの完全な実演。
+
+
+2. **測定 (Measurement) ゲート:**
+* 回路途中での観測による「波動関数の収縮」アニメーションの実装。
+
+
+
+## 6. リスクと対策 (再評価)
+
+* **計算負荷:**
+* 現状: 2量子ビットならPython(CPU)で瞬時に完了するため問題なし。
+* 将来: 3量子ビットでもクライアントサイド(WebAssembly)化、または現状のPythonサーバーで十分対応可能。
+
+
+* **UIの複雑化:**
+* 3量子ビット化する際、スマホ画面での表示が困難になる。
+* 対策: PC/タブレット推奨とし、レスポンシブ対応よりもPCでの操作性を最優先する。
+
+
+
+---
+
+**付録: API仕様 (WebSocket)**
+
+* **Endpoint:** `/ws/session`
+* **Send (Client -> Server):** `{ "action": "update_circuit", "gates": [...] }`
+* **Receive (Server -> Client):** `{ "stateVector": [...], "probabilities": [...] }`
