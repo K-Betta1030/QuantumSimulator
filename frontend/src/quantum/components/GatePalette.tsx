@@ -1,5 +1,5 @@
 import React from "react";
-import DraggableGate from "./DraggableGate"; // 作成した部品
+import DraggableGate from "./DraggableGate";
 
 export default function GatePalette() {
   const gateIds = ["H", "X", "Y", "Z", "S", "Sdg", "T", "Tdg", "CNOT"];

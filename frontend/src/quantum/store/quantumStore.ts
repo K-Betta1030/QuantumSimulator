@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { Complex, CircuitGate } from "../../types/quantum"; // CircuitGateを追加
+import { Complex, CircuitGate } from "../../types/quantum";
 import { v4 as uuidv4 } from 'uuid'; // ID生成用（なければ一旦Date.now()等で代用可）
 
 // uuidがない場合は簡易ID生成関数を使用
@@ -12,13 +12,16 @@ export interface QuantumState {
   probabilities: number[];
   history: Complex[][];
 
-  // --- ★変更: ゲート管理 ---
-  gates: CircuitGate[]; // string[] から変更
+  // --- ゲート管理 ---
+  gates: CircuitGate[];
   
   // --- 既存 ---
   currentStep: number;
   isRunning: boolean;
   log: string[];
+
+  hoveredGate: string | null;
+  setHoveredGate: (gateName: string | null) => void;
 
   // --- アクション ---
   pushLog: (msg: string) => void;
@@ -26,7 +29,6 @@ export interface QuantumState {
 
   setGates: (g: CircuitGate[]) => void;
   
-  // ★変更: ターゲットを指定して追加
   addGate: (name: string, target: number) => void;
   
   removeGate: (idx: number) => void;
@@ -55,6 +57,8 @@ export const useQuantumStore = create<QuantumState>()(
     history: [initialVector],
     isRunning: false,
     log: ["Simulator Ready (Circuit UI Phase)"],
+    hoveredGate: null,
+    setHoveredGate: (name) => set({ hoveredGate: name }),
 
     pushLog: (msg) => set((s) => ({ log: [...s.log, msg] })),
     clearLog: () => set({ log: [] }),
@@ -92,7 +96,7 @@ export const useQuantumStore = create<QuantumState>()(
 
     clearCircuit: () =>
       set({
-        gates: [], // ここでゲートを消す
+        gates: [],
         currentStep: 0,
         stateVector: initialVector,
         probabilities: [1, 0, 0, 0],
@@ -103,7 +107,6 @@ export const useQuantumStore = create<QuantumState>()(
 
     setIsRunning: (v) => set({ isRunning: v }),
 
-    // ★変更: ターゲットを受け取り、オブジェクトとして追加
     addGate: (name: string, target: number) =>
       set((state) => ({
         gates: [

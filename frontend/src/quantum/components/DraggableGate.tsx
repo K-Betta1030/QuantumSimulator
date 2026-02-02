@@ -1,6 +1,7 @@
 import React from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import { useQuantumStore } from "../store/quantumStore";
 
 interface Props {
   gateName: string; // "H", "X", "CNOT" など
@@ -13,6 +14,8 @@ export default function DraggableGate({ gateName, label }: Props) {
     id: `palette-${gateName}`, // 一意のID
     data: { gateName },        // ドロップ時に渡すデータ
   });
+
+  const setHoveredGate = useQuantumStore((s) => s.setHoveredGate);
 
   // ドラッグ中の移動スタイル (transform)
   const style = {
@@ -32,7 +35,7 @@ export default function DraggableGate({ gateName, label }: Props) {
   };
 
   return (
-    <button ref={setNodeRef} style={style} {...listeners} {...attributes}>
+    <button ref={setNodeRef} style={style} {...listeners} {...attributes}onMouseEnter={() => setHoveredGate(gateName)} onMouseLeave={() => setHoveredGate(null)}>
       {label}
     </button>
   );

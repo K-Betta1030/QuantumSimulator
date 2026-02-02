@@ -1,11 +1,13 @@
 import React from "react";
 import { useQuantumStore } from "../store/quantumStore";
-import DroppableZone from "./DroppableZone"; // ★追加
+import DroppableZone from "./DroppableZone";
+import GateTooltip from "./GateTooltip";
 
 export default function CircuitDiagram() {
   const gates = useQuantumStore((s) => s.gates);
   const removeGate = useQuantumStore((s) => s.removeGate);
   const currentStep = useQuantumStore((s) => s.currentStep);
+  const setHoveredGate = useQuantumStore((s) => s.setHoveredGate);
 
   const START_X = 60;
   const GATE_W = 40;
@@ -60,7 +62,7 @@ export default function CircuitDiagram() {
              const cx = x + GATE_W / 2;
              return (
                // ★ pointerEvents: "auto" を追加 (削除クリック用)
-               <g key={g.id} onClick={() => removeGate(i)} style={{ cursor: "pointer", pointerEvents: "auto" }}>
+               <g key={g.id} onMouseEnter={() => setHoveredGate("CNOT")} onMouseLeave={() => setHoveredGate(null)} style={{ cursor: "pointer", pointerEvents: "auto" }}>
                  <line x1={cx} y1={LINE_Y0} x2={cx} y2={LINE_Y1} stroke="#333" strokeWidth="2" />
                  <circle cx={cx} cy={LINE_Y0} r="5" fill="#333" />
                  <circle cx={cx} cy={LINE_Y1} r="15" fill="#333" />
@@ -72,7 +74,7 @@ export default function CircuitDiagram() {
 
           return (
             // ★ pointerEvents: "auto" を追加
-            <g key={g.id} onClick={() => removeGate(i)} style={{ cursor: "pointer", pointerEvents: "auto" }}>
+            <g key={g.id} onMouseEnter={() => setHoveredGate(g.name)} onMouseLeave={() => setHoveredGate(null)} style={{ cursor: "pointer", pointerEvents: "auto" }}>
               <rect
                 x={x}
                 y={y - GATE_H / 2}
@@ -98,6 +100,7 @@ export default function CircuitDiagram() {
           );
         })}
       </svg>
+      <GateTooltip />
     </div>
   );
 }
