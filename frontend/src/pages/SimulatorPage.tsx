@@ -10,6 +10,7 @@ import StatePanel from "../quantum/components/StatePanel";
 import GatePalette from "../quantum/components/GatePalette";
 import CircuitDiagram from "../quantum/components/CircuitDiagram";
 import PresetSelector from "../quantum/components/PresetSelector";
+import ExportQasmButton from "../quantum/components/ExportQasmButton";
 
 export default function SimulatorPage() {
   const stateVector = useQuantumStore((s) => s.stateVector);
@@ -110,6 +111,7 @@ export default function SimulatorPage() {
                 onClear={clearAll}
                 isRunning={isRunning}
               />
+              <ExportQasmButton/>
             </div>
             <div style={{ overflowX: "auto" }}>
               <CircuitDiagram />
