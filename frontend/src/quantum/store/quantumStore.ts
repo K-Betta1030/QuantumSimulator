@@ -45,7 +45,14 @@ export interface QuantumState {
 }
 
 const initialVector: Complex[] = [
-  { re: 1, im: 0 }, { re: 0, im: 0 }, { re: 0, im: 0 }, { re: 0, im: 0 }
+  { re: 1, im: 0 }, // |000>
+  { re: 0, im: 0 }, // |001>
+  { re: 0, im: 0 }, // |010>
+  { re: 0, im: 0 }, // |011>
+  { re: 0, im: 0 }, // |100>
+  { re: 0, im: 0 }, // |101>
+  { re: 0, im: 0 }, // |110>
+  { re: 0, im: 0 }  // |111>
 ];
 
 export const useQuantumStore = create<QuantumState>()(
@@ -53,7 +60,7 @@ export const useQuantumStore = create<QuantumState>()(
     gates: [], 
     currentStep: 0,
     stateVector: initialVector, 
-    probabilities: [1, 0, 0, 0],
+    probabilities: [1, 0, 0, 0, 0, 0, 0, 0],
     history: [initialVector],
     isRunning: false,
     log: ["Simulator Ready (Circuit UI Phase)"],
@@ -88,7 +95,7 @@ export const useQuantumStore = create<QuantumState>()(
     resetState: () => set({
         currentStep: 0,
         stateVector: initialVector,
-        probabilities: [1, 0, 0, 0],
+        probabilities: [1, 0, 0, 0, 0, 0, 0, 0],
         history: [initialVector],
         log: ["Rewind: Back to start"],
         isRunning: false,
@@ -99,7 +106,7 @@ export const useQuantumStore = create<QuantumState>()(
         gates: [],
         currentStep: 0,
         stateVector: initialVector,
-        probabilities: [1, 0, 0, 0],
+        probabilities: [1, 0, 0, 0, 0, 0, 0, 0],
         history: [initialVector],
         log: ["Circuit cleared"],
         isRunning: false,

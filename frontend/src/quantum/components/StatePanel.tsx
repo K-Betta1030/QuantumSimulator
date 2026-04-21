@@ -6,8 +6,9 @@ interface Props {
 }
 
 export default function StatePanel({ stateVector }: Props) {
-  const labels = ["|00⟩", "|01⟩", "|10⟩", "|11⟩"];
-
+  // ★ ポイント1: 状態ベクトルの長さから量子ビット数を逆算し、ラベルを動的生成する
+  // 例: stateVector.length が 4 なら 2ビット、8 なら 3ビット
+  const numQubits = Math.log2(stateVector.length);
   return (
     <div style={{ 
       background: "white", 
@@ -15,7 +16,7 @@ export default function StatePanel({ stateVector }: Props) {
       borderRadius: "12px", 
       boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
       fontFamily: "sans-serif",
-      minWidth: "300px",
+      minWidth: "320px",
       height: "100%",
       display: "flex",
       flexDirection: "column"
@@ -24,8 +25,12 @@ export default function StatePanel({ stateVector }: Props) {
         Probability & Phase
       </h3>
       
-      <div style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: "15px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "15px" }}>
         {stateVector.map((amp, i) => {
+          // 動的ラベル生成（例: 0 -> "|000⟩", 1 -> "|001⟩"）
+          const binaryStr = i.toString(2).padStart(numQubits, '0');
+          const label = `|${binaryStr}⟩`;
+
           // 確率計算
           const prob = amp.re ** 2 + amp.im ** 2;
           const probPercent = Math.round(prob * 100);
@@ -44,17 +49,17 @@ export default function StatePanel({ stateVector }: Props) {
               
               {/* 1. ラベル */}
               <div style={{ 
-                width: "40px", 
+                width: "48px", 
                 fontWeight: "bold", 
-                fontSize: "1.1em", 
+                fontSize: "1.05em", 
                 color: "#333",
                 fontFamily: "monospace"
               }}>
-                {labels[i]}
+                {label}
               </div>
 
               {/* 2. 確率バー */}
-              <div style={{ flex: 1, background: "#f5f5f5", height: "28px", borderRadius: "6px", position: "relative", overflow: "hidden" }}>
+              <div style={{ flex: 1, background: "#f5f5f5", height: "24px", borderRadius: "6px", position: "relative", overflow: "hidden" }}>
                 <div style={{ 
                   width: `${probPercent}%`, 
                   height: "100%", 
@@ -81,7 +86,7 @@ export default function StatePanel({ stateVector }: Props) {
               </div>
 
               {/* 3. 位相メーター (色付き) */}
-              <div style={{ width: "32px", height: "32px", flexShrink: 0 }}>
+              <div style={{ width: "28px", height: "28px", flexShrink: 0 }}>
                  <svg width="32" height="32" viewBox="0 0 32 32">
                    {/* 外枠 */}
                    <circle cx="16" cy="16" r="14" fill="white" stroke="#eee" strokeWidth="2" />
