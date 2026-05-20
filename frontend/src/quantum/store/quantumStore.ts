@@ -29,7 +29,7 @@ export interface QuantumState {
 
   setGates: (g: CircuitGate[]) => void;
   
-  addGate: (name: string, target: number) => void;
+  addGate: (name: string, target: number, controls?: number[]) => void;
   
   removeGate: (idx: number) => void;
 
@@ -114,11 +114,11 @@ export const useQuantumStore = create<QuantumState>()(
 
     setIsRunning: (v) => set({ isRunning: v }),
 
-    addGate: (name: string, target: number) =>
+    addGate: (name: string, target: number, controls: number[] = []) =>
       set((state) => ({
         gates: [
           ...state.gates, 
-          { id: generateId(), name, target }
+          { id: generateId(), name, target, controls }
         ],
       })),
 

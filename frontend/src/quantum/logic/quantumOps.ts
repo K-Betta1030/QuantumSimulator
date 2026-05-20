@@ -13,7 +13,7 @@ export function initConnection() {
   socket = new WebSocket("ws://127.0.0.1:8000/ws/session");
 
   socket.onopen = () => {
-    console.log("✅ WS Connected (2-Qubit Mode)");
+    console.log("✅ WS Connected (3-Qubit Mode)");
   };
 
   socket.onmessage = (evt) => {
@@ -26,7 +26,7 @@ export function initConnection() {
       return;
     }
 
-    // Backendからは長さ4の配列が返ってくる
+    // ★ Backendからは長さ8の配列が返ってくる
     const newVec = data.state_vector as Complex[];
     const newProbs = data.probabilities as number[];
 
@@ -34,8 +34,7 @@ export function initConnection() {
     updateFromBackend(newVec, newProbs);
     nextStep();
 
-    // ログには簡易的に確率を表示 (4状態分)
-    // P00, P01, P10, P11
+    // ログには簡易的に確率を表示 (8状態分: 000~111)
     const pStr = newProbs.map(p => p.toFixed(2)).join(", ");
     pushLog(`→ Probs: [${pStr}]`);
 
@@ -77,6 +76,7 @@ export async function stepForward() {
   const gateObj = gates[currentStep];
   const gateName = gateObj.name;
   const targetIndex = gateObj.target;
+  const controls = gateObj.controls || [];
 
   // CNOTの場合は特例処理（今は0->1固定なのでtarget=0として送るか、バックエンドの仕様に合わせる）
   // バックエンドの仕様では CNOT(CX) は target指定に関わらず 0->1 で実装されているので
@@ -84,6 +84,11 @@ export async function stepForward() {
   
   if (gateName === "CNOT") {
       pushLog(`🧩 Step: CNOT (Control:0 -> Target:1)`);
+  } else {
+      pushLog(`🧩 Step: ${gateName} on Qubit ${targetIndex}`);
+  }// ログの出し分け（CNOTやCCXのときは制御ビットも表示してかっこよくする）
+  if (controls.length > 0) {
+      pushLog(`🧩 Step: ${gateName} (Ctrl:[${controls.join(",")}] -> Target:${targetIndex})`);
   } else {
       pushLog(`🧩 Step: ${gateName} on Qubit ${targetIndex}`);
   }
@@ -94,7 +99,8 @@ export async function stepForward() {
     socket!.send(
       JSON.stringify({
         gate: gateName,
-        target: targetIndex, // ★動的な値を送信！
+        target: targetIndex,
+        controls: controls,
         state: stateVector,
       })
     );

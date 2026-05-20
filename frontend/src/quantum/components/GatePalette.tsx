@@ -2,7 +2,7 @@ import React from "react";
 import DraggableGate from "./DraggableGate";
 
 export default function GatePalette() {
-  const gateIds = ["H", "X", "Y", "Z", "S", "Sdg", "T", "Tdg", "CNOT"];
+  const gateIds = ["H", "X", "Y", "Z", "S", "Sdg", "T", "Tdg", "CNOT", "CCX"];
 
   const getLabel = (id: string) => {
     if (id === "Sdg") return "S†";

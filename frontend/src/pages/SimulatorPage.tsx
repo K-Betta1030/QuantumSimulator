@@ -28,8 +28,21 @@ export default function SimulatorPage() {
     if (!over) return;
     const gateName = active.data.current?.gateName;
     const targetQubit = over.data.current?.target;
-    if (gateName && (targetQubit === 0 || targetQubit === 1)) {
-      addGate(gateName, targetQubit);
+    if (gateName && typeof targetQubit === "number") {
+      // ★ 追加: CNOT と CCX の場合の制御ビット自動割り当てロジック
+      let controls: number[] = [];
+      
+      if (gateName === "CCX") {
+        // CCXの場合：ターゲット以外の2本を制御ビットにする
+        controls = [0, 1, 2].filter(q => q !== targetQubit);
+      } 
+      else if (gateName === "CNOT" || gateName === "CX") {
+        // CNOTの場合：とりあえずターゲットの1つ上のワイヤーを制御ビットにする（一番上なら1つ下）
+        controls = targetQubit === 0 ? [1] : [targetQubit - 1];
+      }
+
+      // Storeの addGate 関数を呼び出す (引数を増やす必要があります)
+      addGate(gateName, targetQubit, controls);
     }
   };
 

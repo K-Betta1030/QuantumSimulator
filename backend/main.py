@@ -17,6 +17,8 @@ app.add_middleware(
 
 # --- 1. 基本行列の定義 (2x2) ---
 I = np.array([[1, 0], [0, 1]], dtype=complex) # 単位行列 (Identity)
+P0 = np.array([[1, 0], [0, 0]], dtype=complex) # 射影演算子 |0><0|
+P1 = np.array([[0, 0], [0, 1]], dtype=complex) # 射影演算子 |1><1|
 
 SINGLE_GATES = {
     "X": np.array([[0, 1], [1, 0]], dtype=complex),
@@ -29,15 +31,6 @@ SINGLE_GATES = {
     "Tdg": np.array([[1, 0], [0, np.exp(-1j * np.pi / 4)]], dtype=complex),
 }
 
-# --- 2. 2量子ビット用行列 (4x4) ---
-# CNOT (Control: 0, Target: 1)
-CX = np.array([
-    [1, 0, 0, 0],
-    [0, 1, 0, 0],
-    [0, 0, 0, 1],
-    [0, 0, 1, 0]
-], dtype=complex)
-
 # --- ヘルパー関数 ---
 
 def to_c_dict(c: complex):
@@ -47,39 +40,67 @@ def parse_complex_list(raw_list):
     """[{re, im}, ...] -> np.array"""
     return np.array([complex(x["re"], x["im"]) for x in raw_list], dtype=complex).reshape(-1, 1)
 
-# ★重要: ゲート拡張ロジック (Tensor Product)
-def expand_gate(gate_name: str, target: int, n_qubits=2):
+# --- ★ 新しい動的ゲート拡張ロジック ---
+
+def expand_single_gate(gate_matrix, target: int, n_qubits: int = 3):
+    """1量子ビットゲートを n_qubits 全体の空間 (8x8など) に拡張する"""
+    res = np.eye(1, dtype=complex) # 初期値はスカラーの1
+    for i in reversed(range(n_qubits)):
+        if i == target:
+            res = np.kron(res, gate_matrix)
+        else:
+            res = np.kron(res, I)
+    return res
+
+def expand_mcx(controls: list, target: int, n_qubits: int = 3):
     """
-    1量子ビットゲートを全体系(4x4)に拡張する。
-    target: 0 or 1
+    任意の数の制御ビットを持つマルチコントロールXゲート（CNOT, CCX等）を動的生成
+    式: MCX = I_total - (P1_controls * I_target) + (P1_controls * X_target)
     """
-    if gate_name == "CNOT":
-        # 今回は簡易化のため CNOT は Control=0, Target=1 固定の "CX" として扱う
-        return CX
+    def make_term(op_dict):
+        """指定された量子ビットに特定の演算子を配置し、それ以外はIとするテンソル積を計算"""
+        res = np.eye(1, dtype=complex)
+        for i in reversed(range(n_qubits)):
+            op = op_dict.get(i, I)
+            res = np.kron(res, op)
+        return res
+
+    # 全体の単位行列
+    I_total = np.eye(2**n_qubits, dtype=complex)
+    
+    # 制御ビットがすべて |1> である部分空間を抽出する射影演算子 (P1)
+    op_dict_I = {c: P1 for c in controls}
+    
+    # 制御ビットがすべて |1> で、かつターゲットに X をかける演算子
+    op_dict_X = {c: P1 for c in controls}
+    op_dict_X[target] = SINGLE_GATES["X"]
+    
+    # MCX = 全体 - (該当部分空間の何もしない操作) + (該当部分空間にXをかける操作)
+    return I_total - make_term(op_dict_I) + make_term(op_dict_X)
+
+def expand_gate(gate_name: str, target: int, controls: list = None, n_qubits: int = 3):
+    """ゲート名と適用先から、全体のユニタリ行列を生成する"""
+    if controls is None:
+        controls = []
+
+    if gate_name in ["CNOT", "CX"]:
+        if not controls:
+            controls = [0 if target != 0 else 1] # 暫定
+        return expand_mcx(controls, target, n_qubits)
+        
+    elif gate_name == "CCX":
+        if len(controls) < 2:
+            # 制御ビットが2つ指定されていない場合の暫定フォールバック（残り2つを割り当て）
+            available = [i for i in range(n_qubits) if i != target]
+            controls = available[:2]
+        return expand_mcx(controls, target, n_qubits)
     
     if gate_name not in SINGLE_GATES:
         raise ValueError(f"Unknown gate: {gate_name}")
 
-    gate_matrix = SINGLE_GATES[gate_name]
+    return expand_single_gate(SINGLE_GATES[gate_name], target, n_qubits)
 
-    # Qubit 0 (上位ビット) に適用する場合: U (x) I
-    if target == 0:
-        return np.kron(gate_matrix, I)
-    
-    # Qubit 1 (下位ビット) に適用する場合: I (x) U
-    elif target == 1:
-        return np.kron(I, gate_matrix)
-    
-    else:
-        raise ValueError("Invalid target qubit index")
-
-# --- 通信モデル ---
-
-class GateOperation(BaseModel):
-    gate: str
-    target: int = 0 # デフォルトは0番ビット
-
-# --- API ---
+# --- APIのエンドポイント部分の修正 ---
 
 @app.websocket("/ws/session")
 async def websocket_session(websocket: WebSocket):
@@ -89,32 +110,31 @@ async def websocket_session(websocket: WebSocket):
             data = await websocket.receive_json()
             
             gate_name = data.get("gate")
-            target_idx = data.get("target", 0) # 指定がなければ0番とみなす
+            target_idx = data.get("target", 0)
+            # ★ 変更: "control" (単数) ではなく "controls" (配列) として受け取る
+            controls = data.get("controls", []) 
             
-            # 状態ベクトルの受信 (サイズ4になっていることを想定)
             raw_state = data.get("state", [])
+            N_STATES = 8 
             
-            # 初回など空の場合は初期状態 |00> = [1, 0, 0, 0] を作る
             if not raw_state:
-                state = np.zeros((4, 1), dtype=complex)
+                state = np.zeros((N_STATES, 1), dtype=complex)
                 state[0, 0] = 1+0j
             else:
                 state = parse_complex_list(raw_state)
-                # 万が一サイズが合わない(以前のキャッシュなど)場合のガード
-                if state.shape[0] != 4:
-                    state = np.zeros((4, 1), dtype=complex)
+                if state.shape[0] != N_STATES:
+                    state = np.zeros((N_STATES, 1), dtype=complex)
                     state[0, 0] = 1+0j
 
             try:
-                # 4x4行列を取得して適用
-                full_matrix = expand_gate(gate_name, target_idx)
+                # ★ expand_gateにcontrols配列を渡すように変更
+                full_matrix = expand_gate(gate_name, target_idx, controls, n_qubits=3)
                 new_state = np.dot(full_matrix, state)
                 probs = np.abs(new_state.flatten()) ** 2
                 
                 await websocket.send_json({
                     "gate": gate_name,
                     "target": target_idx,
-                    # 長さ4の配列を返す
                     "state_vector": [to_c_dict(x) for x in new_state.flatten()],
                     "probabilities": probs.tolist(),
                 })

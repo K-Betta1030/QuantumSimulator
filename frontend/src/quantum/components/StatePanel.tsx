@@ -86,32 +86,41 @@ export default function StatePanel({ stateVector }: Props) {
               </div>
 
               {/* 3. 位相メーター (色付き) */}
-              <div style={{ width: "28px", height: "28px", flexShrink: 0 }}>
-                 <svg width="32" height="32" viewBox="0 0 32 32">
-                   {/* 外枠 */}
-                   <circle cx="16" cy="16" r="14" fill="white" stroke="#eee" strokeWidth="2" />
-                   
-                   {prob > 0.01 && (
-                     <>
-                       {/* 扇形で位相の範囲を示す等の演出も可能ですが、シンプルに針と色で */}
-                       <circle cx="16" cy="16" r="10" fill={color} opacity={0.2} />
-                       <line 
-                         x1="16" y1="16" 
-                         x2="16" y2="4" 
-                         stroke={color} 
-                         strokeWidth="2.5" 
-                         strokeLinecap="round"
-                         transform={`rotate(${degrees}, 16, 16)`} 
-                       />
-                       <circle cx="16" cy="16" r="2.5" fill={color} />
-                     </>
-                   )}
-                 </svg>
-                 <div style={{ fontSize: "0.6em", textAlign: "center", color: "#999", marginTop: "-2px" }}>
-                    {prob > 0.01 ? `${Math.round(degrees)}°` : ""}
+              {/* ★ ポイント: 幅を少し広げ(50px)、display: "flex" で円とテキストを「横並び」にする */}
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", width: "56px", flexShrink: 0 }}>
+                 <div style={{ width: "28px", height: "28px", position: "relative" }}>
+                   <svg width="28" height="28" viewBox="0 0 28 28">
+                     <circle cx="14" cy="14" r="12" fill="white" stroke="#eee" strokeWidth="2" />
+                     
+                     {prob > 0.01 && (
+                       <>
+                         <circle cx="14" cy="14" r="9" fill={color} opacity={0.2} />
+                         <line 
+                           x1="14" y1="14" 
+                           x2="14" y2="4" 
+                           stroke={color} 
+                           strokeWidth="2" 
+                           strokeLinecap="round"
+                           transform={`rotate(${degrees}, 14, 14)`} 
+                         />
+                         <circle cx="14" cy="14" r="2" fill={color} />
+                       </>
+                     )}
+                   </svg>
                  </div>
+                 
+                 {/* ★ ポイント: position: "absolute" をやめ、普通のテキストとして右に並べる */}
+                 {prob > 0.01 && (
+                   <div style={{ 
+                     fontSize: "0.65em", 
+                     color: "#999", 
+                     fontWeight: "bold",
+                     minWidth: "24px" // 角度がマイナスや3桁になってもガタつかないように幅を確保
+                   }}>
+                      {Math.round(degrees)}°
+                   </div>
+                 )}
               </div>
-
             </div>
           );
         })}
