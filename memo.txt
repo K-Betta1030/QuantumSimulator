@@ -4,3 +4,6 @@ uvicorn main:app --reload
 frontend側実行
 cd C:\work\QuantumSimulator\frontend
 npm start
+
+仮想環境起動
+activate quantum-backend
